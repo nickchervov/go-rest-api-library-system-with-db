@@ -13,7 +13,7 @@ type LibraryService struct {
 	store repository.Storage
 }
 
-func NewLibraryService(store *repository.Store) *LibraryService {
+func NewLibraryService(store repository.Storage) *LibraryService {
 	return &LibraryService{store: store}
 }
 
