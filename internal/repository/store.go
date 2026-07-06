@@ -9,16 +9,35 @@ import (
 
 // Только всё связанное с SQL
 
-type LibraryStore struct {
+type Storage interface {
+	GetAllAuthors() ([]models.Author, error)
+	GetAuthorById(id int) (models.Author, error)
+	CreateAuthor(a models.Author) (int, error)
+	UpdateAuthor(id int, a models.Author) error
+	DeleteAuthor(id int) error
+	GetAllBooks() ([]models.BookResponse, error)
+	GetBookById(id int) (models.BookResponse, error)
+	CreateBook(b models.Book) (int, error)
+	UpdateBook(id int, b models.Book) error
+	DeleteBook(id int) error
+	GetAllReaders() ([]models.Reader, error)
+	CreateReader(r models.Reader) (int, error)
+	DeleteReader(id int) error
+	GetActiveBorrowings() ([]models.BorrowingResponse, error)
+	TakeOffBook(b models.Borrowing) (int, error)
+	ReturnBook(idBorrowing int, date string) error
+}
+
+type Store struct {
 	db *sql.DB
 }
 
-func NewLibraryStore(db *sql.DB) *LibraryStore {
-	return &LibraryStore{db: db}
+func NewLibraryStore(db *sql.DB) *Store {
+	return &Store{db: db}
 }
 
 // Methods for authors table
-func (s *LibraryStore) GetAllAuthors() ([]models.Author, error) {
+func (s *Store) GetAllAuthors() ([]models.Author, error) {
 	rows, err := s.db.Query("SELECT id, name, country FROM authors")
 	if err != nil {
 		return nil, fmt.Errorf("get all authors issues: %w", err)
@@ -40,7 +59,7 @@ func (s *LibraryStore) GetAllAuthors() ([]models.Author, error) {
 	return authors, nil
 }
 
-func (s *LibraryStore) GetAuthorById(id int) (models.Author, error) {
+func (s *Store) GetAuthorById(id int) (models.Author, error) {
 	row := s.db.QueryRow("SELECT id, name, country FROM authors WHERE id = :id", sql.Named("id", id))
 
 	var author models.Author
@@ -50,7 +69,7 @@ func (s *LibraryStore) GetAuthorById(id int) (models.Author, error) {
 	return author, nil
 }
 
-func (s *LibraryStore) CreateAuthor(a models.Author) (int, error) {
+func (s *Store) CreateAuthor(a models.Author) (int, error) {
 	res, err := s.db.Exec("INSERT INTO authors (name, country) VALUES (:name,:country)",
 		sql.Named("name", a.Name),
 		sql.Named("country", a.Country))
@@ -66,7 +85,7 @@ func (s *LibraryStore) CreateAuthor(a models.Author) (int, error) {
 	return int(lastId), nil
 }
 
-func (s *LibraryStore) UpdateAuthor(id int, a models.Author) error {
+func (s *Store) UpdateAuthor(id int, a models.Author) error {
 	_, err := s.db.Exec("UPDATE authors SET name = :name, country = :country WHERE id = :id",
 		sql.Named("name", a.Name),
 		sql.Named("country", a.Country),
@@ -77,7 +96,7 @@ func (s *LibraryStore) UpdateAuthor(id int, a models.Author) error {
 	return nil
 }
 
-func (s *LibraryStore) DeleteAuthor(id int) error {
+func (s *Store) DeleteAuthor(id int) error {
 	var bookExists bool
 	err := s.db.QueryRow("SELECT EXISTS(SELECT 1 FROM books WHERE authors_id = :id)", sql.Named("id", id)).Scan(&bookExists)
 	if err != nil {
@@ -101,7 +120,7 @@ func (s *LibraryStore) DeleteAuthor(id int) error {
 }
 
 // Methods for books table
-func (s *LibraryStore) GetAllBooks() ([]models.BookResponse, error) {
+func (s *Store) GetAllBooks() ([]models.BookResponse, error) {
 	rows, err := s.db.Query(`SELECT b.id, b.title, b.isbn, b.year,a.id, a.name, a.country FROM books b
 		JOIN authors a ON b.authors_id = a.id`)
 	if err != nil {
@@ -124,7 +143,7 @@ func (s *LibraryStore) GetAllBooks() ([]models.BookResponse, error) {
 	return books, nil
 }
 
-func (s *LibraryStore) GetBookById(id int) (models.BookResponse, error) {
+func (s *Store) GetBookById(id int) (models.BookResponse, error) {
 	row := s.db.QueryRow(`SELECT b.id, b.title, b.isbn, b.year,a.id, a.name, a.country FROM books b
 		JOIN authors a ON b.authors_id = a.id WHERE b.id = :id`, sql.Named("id", id))
 
@@ -135,7 +154,7 @@ func (s *LibraryStore) GetBookById(id int) (models.BookResponse, error) {
 	return book, nil
 }
 
-func (s *LibraryStore) CreateBook(b models.Book) (int, error) {
+func (s *Store) CreateBook(b models.Book) (int, error) {
 	var authorExists bool
 	err := s.db.QueryRow("SELECT EXISTS(SELECT 1 FROM authors WHERE id = :id)", sql.Named("id", b.AuthorsId)).Scan(&authorExists)
 	if err != nil {
@@ -161,7 +180,7 @@ func (s *LibraryStore) CreateBook(b models.Book) (int, error) {
 	return int(lastId), nil
 }
 
-func (s *LibraryStore) UpdateBook(id int, b models.Book) error {
+func (s *Store) UpdateBook(id int, b models.Book) error {
 	_, err := s.db.Exec("UPDATE books SET title = :title, isbn = :isbn, year = :year, authors_id = :authors_id WHERE id = :id",
 		sql.Named("title", b.Title),
 		sql.Named("isbn", b.Isbn),
@@ -174,7 +193,7 @@ func (s *LibraryStore) UpdateBook(id int, b models.Book) error {
 	return nil
 }
 
-func (s *LibraryStore) DeleteBook(id int) error {
+func (s *Store) DeleteBook(id int) error {
 	var borrowingsExists bool
 	err := s.db.QueryRow("SELECT EXISTS(SELECT 1 FROM borrowing WHERE book_id = :id)", sql.Named("id", id)).Scan(&borrowingsExists)
 	if err != nil {
@@ -198,7 +217,7 @@ func (s *LibraryStore) DeleteBook(id int) error {
 }
 
 // Methods for readers table
-func (s *LibraryStore) GetAllReaders() ([]models.Reader, error) {
+func (s *Store) GetAllReaders() ([]models.Reader, error) {
 	rows, err := s.db.Query("SELECT id, name, email, phone FROM readers")
 	if err != nil {
 		return nil, fmt.Errorf("get all readers issues: %w", err)
@@ -219,7 +238,7 @@ func (s *LibraryStore) GetAllReaders() ([]models.Reader, error) {
 	return readers, nil
 }
 
-func (s *LibraryStore) CreateReader(r models.Reader) (int, error) {
+func (s *Store) CreateReader(r models.Reader) (int, error) {
 	res, err := s.db.Exec("INSERT INTO readers (name,email,phone) VALUES (:name,:email,:phone)",
 		sql.Named("name", r.Name),
 		sql.Named("email", r.Email),
@@ -234,7 +253,7 @@ func (s *LibraryStore) CreateReader(r models.Reader) (int, error) {
 	return int(lastId), nil
 }
 
-func (s *LibraryStore) DeleteReader(id int) error {
+func (s *Store) DeleteReader(id int) error {
 	var borrowingsExists bool
 	err := s.db.QueryRow("SELECT EXISTS(SELECT 1 FROM borrowing WHERE readers_id = :id)", sql.Named("id", id)).Scan(&borrowingsExists)
 	if err != nil {
@@ -258,7 +277,7 @@ func (s *LibraryStore) DeleteReader(id int) error {
 }
 
 // Methods for borrowing table
-func (s *LibraryStore) GetActiveBorrowings() ([]models.BorrowingResponse, error) {
+func (s *Store) GetActiveBorrowings() ([]models.BorrowingResponse, error) {
 	rows, err := s.db.Query(`
 	SELECT 
 		b.id, 
@@ -300,7 +319,7 @@ func (s *LibraryStore) GetActiveBorrowings() ([]models.BorrowingResponse, error)
 	return borrowings, nil
 }
 
-func (s *LibraryStore) TakeOffBook(b models.Borrowing) (int, error) {
+func (s *Store) TakeOffBook(b models.Borrowing) (int, error) {
 	var bookReaderExists bool
 	err := s.db.QueryRow("SELECT EXISTS (SELECT 1 FROM books WHERE id = :book_id) AND EXISTS (SELECT 1 FROM readers WHERE id = :reader_id)",
 		sql.Named("book_id", b.BookId), sql.Named("reader_id", b.ReadersId)).Scan(&bookReaderExists)
@@ -350,7 +369,7 @@ func (s *LibraryStore) TakeOffBook(b models.Borrowing) (int, error) {
 	return int(lastId), nil
 }
 
-func (s *LibraryStore) ReturnBook(idBorrowing int, date string) error {
+func (s *Store) ReturnBook(idBorrowing int, date string) error {
 	_, err := s.db.Exec("UPDATE borrowing SET return_date = :date WHERE id = :id", sql.Named("date", date), sql.Named("id", idBorrowing))
 	if err != nil {
 		return fmt.Errorf("return book issues: %w", err)

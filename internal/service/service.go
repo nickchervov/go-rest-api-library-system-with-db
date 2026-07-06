@@ -10,10 +10,10 @@ import (
 // Только всё связанное с бизнес логикой (работы сервера)
 
 type LibraryService struct {
-	store *repository.LibraryStore
+	store repository.Storage
 }
 
-func NewLibraryService(store *repository.LibraryStore) *LibraryService {
+func NewLibraryService(store *repository.Store) *LibraryService {
 	return &LibraryService{store: store}
 }
 
