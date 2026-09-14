@@ -1,4 +1,4 @@
-package models
+package domain
 
 type Author struct {
 	Id      int    `json:"id" validate:"omitempty"`
@@ -33,8 +33,8 @@ type Borrowing struct {
 	Id         int    `json:"id" validate:"omitempty"`
 	BookId     int    `json:"book_id" validate:"required,numeric"`
 	ReadersId  int    `json:"readers_id" validate:"required,numeric"`
-	BorrowDate string `json:"borrow_date" validate:"required,datetime=2006-01-02"`
-	ReturnDate string `json:"return_date" validate:"omitempty"`
+	BorrowDate string `json:"borrow_date"`
+	ReturnDate string `json:"return_date"`
 }
 type BorrowingResponse struct {
 	Id         int          `json:"id"`
