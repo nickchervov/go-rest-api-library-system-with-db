@@ -17,7 +17,6 @@
 | `modernc.org/sqlite` | чистый Go-драйвер SQLite — работает без CGO, сборка не требует компилятора C |
 | `golang-migrate/migrate/v4` | версионирование схемы БД: миграции применяются автоматически при старте |
 | `go-playground/validator/v10` | декларативная валидация входных данных через теги структур |
-| `air` | live-reload при разработке |
 
 ## Архитектура
 
@@ -95,11 +94,7 @@ if err := h.svc.CreateBook(input); err != nil {
 git clone <repo-url>
 cd go-rest-api-library-system-with-db
 
-# обычный запуск
 go run ./cmd/server
-
-# или с live-reload
-air
 ```
 
 Сервер поднимется на `http://localhost:8080`.
