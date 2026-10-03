@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 	"errors"
-	"library/internal/connectors"
-	"library/internal/repository"
+	"library/internal/adapters"
+	"library/internal/controllers"
 	"library/internal/service"
 	"log"
 	"net/http"
@@ -17,13 +17,13 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer cancel()
 
-	repo, err := repository.NewLibraryStore("library.db")
+	repo, err := adapters.NewLibraryStore("library.db")
 	if err != nil {
 		log.Fatalf("creating repository: %v", err)
 	}
 	svc := service.NewLibraryService(repo)
 
-	h := connectors.SetupRoutes(svc)
+	h := controllers.SetupRoutes(svc)
 
 	server := http.Server{
 		Addr:    ":8080",
